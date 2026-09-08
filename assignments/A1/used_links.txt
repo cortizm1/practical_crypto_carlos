@@ -1,0 +1,8 @@
+assignment1_links
+https://docs.python.org/3/library/argparse.html
+https://docs.python.org/3/library/logging.html
+https://www.geeksforgeeks.org/python/decorators-in-python/
+https://www.geeksforgeeks.org/python/get-current-date-and-time-using-python/
+https://stackoverflow.com/questions/18982610/difference-between-except-and-except-exception-as-e#18982726
+https://www.geeksforgeeks.org/python/reading-writing-text-files-python/
+https://stackoverflow.com/questions/5137497/ddg#5137509
