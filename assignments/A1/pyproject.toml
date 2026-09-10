@@ -7,7 +7,9 @@ authors = [
     { name = "Carlos Ortiz", email = "cortizm1@jh.edu" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "numpy>=2.5.3",
+]
 
 [project.scripts]
 a1 = "a1:main"

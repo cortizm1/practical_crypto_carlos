@@ -6,67 +6,101 @@ logger = logging.getLogger(__name__)
 
 import os
 
+import numpy as np
+
 def function_logger(func, *args): #
-    func_args = args
-
-    def wrapper(func_args):
-        t = datetime.datetime.now()
-        logger.info(f"{t}\tExecuting {func.__name__}.")
-        return func(func_args)
-
+    def wrapper(args):
+        try:
+            t = datetime.datetime.now()
+            logger.info(f"{t}\tExecuting {func.__name__}.") 
+            return func(args)
+        except Exception as e:
+                error_writer(e, description=f"Wrapper error.")
     return wrapper
 
-def error_writer(e:Exception):
+# tuple unpacking kwargs and all of that didn't work for a two param function... brittle code but I'm rusty
+def function_logger_too(func, *args, **kwargs): #
+    def wrapper(args, kwargs):
+        try:
+            t = datetime.datetime.now()
+            logger.info(f"{t}\tExecuting {func.__name__}.") 
+            return func(args, kwargs)
+        except Exception as e:
+                error_writer(e, description=f"Wrapper error.")
+    return wrapper
+
+def error_writer(e:Exception, description:str):
     t = datetime.datetime.now()
-    logger.error(f"{t}\t{e}")
+    logger.error(f"{t}\t{description}\t{e}")
 
 @function_logger
 def source_dir_walker(cyphertext_filename):
-    #looking for files under the directory
-    dir = os.path.dirname(os.path.realpath(__file__))
+    try:
+        #looking for files under the directory
+        dir_ = os.path.dirname(os.path.realpath(__file__))
+        full_path = os.path.join(dir_, cyphertext_filename)
 
-    #not walking more than this dir
-    for files in os.walk(os.path.dirname(os.path.realpath(__file__))):
-        if cyphertext_filename in files:
-            print(f"{cyphertext_filename} FOUND!!")  # don't visit __pycache__ directories
+        if os.path.isfile(full_path):
+            return (True, full_path)
         else:
-            print(f"{cyphertext_filename} NOTFOUND!!")
+            logger.warning(f"404. File not found under {dir_}")
+            return (False, "")
+    except Exception as e:
+        error_writer(e, description=f"{cyphertext_filename} not found.")
 
 @function_logger
 def cyphertext_reader(cyphertext_filename:str):
     try:
         # shutil or something walk to and read from the .txt
-        source_dir_walker(cyphertext_filename)
-        f1 = open("cyphertext_filename", "r") 
-        cyphertext_blob = cyphertext_filename
-        return cyphertext_blob
+        full_path = source_dir_walker(cyphertext_filename)
+        if full_path[0]:
+            with open(full_path[1], "r") as file:
+                cyphertext_blob = file.read()
+                cyphertext_blob = [(l - 64) for l in cyphertext_blob.upper().encode() if (64<int(l)<=90)] #utf-8 encoding, and bytes to [1-26]
+                return cyphertext_blob
     except Exception as e:
-        error_writer(e)
-        print(f"{cyphertext_filename} not found.")
+        error_writer(e, description=f"Error while reading {cyphertext_filename}.")
 
-@function_logger
-def cyphertext_digitizer_and_matrixator(cyphertext_blob:str):
+@function_logger_too
+def cyphertext_digitizer_and_matrixator(cyphertext_blob:list, key:str):
     try:
+        digitized_key = [(k - 64) for k in key.upper().encode() if (64<int(k)<=90)]
+        key_length = len(digitized_key)
+
+        index_ = 1
+        row_ = 0
+        cyphertext_blob_matrix = np.full((int(len(cyphertext_blob) / (key_length) + 1), key_length), 0) # the +1 is not perfect stuff
+
         # blob populates a matrix, could be while streaming the cyphertext.txt but for now kept separate
-        cyphertext_blob_matrix = cyphertext_blob
-        return cyphertext_blob_matrix
+        for cl in cyphertext_blob:
+            column = ((index_-1) % key_length)
+            cyphertext_blob_matrix[row_, column] = cl
+            row_shifter = 1 if (int((index_) % key_length) == 0 and index_ != 0) else 0
+            row_ = row_ + row_shifter
+            index_ = index_ + 1
+        return cyphertext_blob_matrix, digitized_key
     except Exception as e:
-        error_writer(e)
+        error_writer(e, description=f"Error while turning .txt into a digitized matrix.")
+
+@function_logger_too
+def matrix_encipherer(cyphertext_blob_matrix:np.ndarray, digitized_key:list): #needs to be numpy array/matrix
+    try:
+        # column-based matrix sums
+        cyphertext_blob_matrix_ciphered = (cyphertext_blob_matrix + digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
+        return cyphertext_blob_matrix_ciphered
+    except Exception as e:
+        error_writer(e, description=f"Error while enciphering the matrix.")
 
 @function_logger
-def matrix_validator(cyphertext_blob_matrix): #needs to be numpy array/matrix
+def matrix_decryption_bytes(cyphertext_blob_matrix_ciphered:np.ndarray):
     try:
-        # quick check of the number of columns just to flex really
-        cyphertext_blob_matrix_verified = cyphertext_blob_matrix
-        return cyphertext_blob_matrix_verified
-    except Exception as e:
-        error_writer(e)
+        # numpy to utf-8 format
+        plaintext_blob_matrix = cyphertext_blob_matrix_ciphered
 
-@function_logger
-def matrix_decryption(cyphertext_blob_matrix_verified):
-    try:
-        # matrix operations make the shifting needed to decrypt, using mod 26
-        plaintext_blob_matrix = cyphertext_blob_matrix_verified
+        # numpy to list dump
+
+        # list decoding to string
+        
         return plaintext_blob_matrix
     except Exception as e:
         error_writer(e)
@@ -107,10 +141,9 @@ def main(argv=None):
     logger.info(f'\t{t}\tStarting decryption of {args.encrpyted_text_name} using key {args.key}')
 
     extracted_text_blob = cyphertext_reader(args.encrpyted_text_name)
-    print(f"{extracted_text_blob}")
-    blob_matrix = cyphertext_digitizer_and_matrixator(extracted_text_blob)
-    blob_matrix_verified = matrix_validator(blob_matrix)
-    decrypted_blob_matrix = matrix_decryption(blob_matrix_verified)
+    blob_matrix, digitized_key = cyphertext_digitizer_and_matrixator(extracted_text_blob, args.key)
+    blob_matrix_ciphered = matrix_encipherer(blob_matrix, digitized_key)
+    decrypted_blob_matrix = matrix_decryption_bytes(blob_matrix_ciphered)
     decrypted_blob = matrix_alphabetization_and_dumper(decrypted_blob_matrix)
     writeout_confirmation = plaintext_writeout(decrypted_blob)
     print(f"Success status:\t{writeout_confirmation}")

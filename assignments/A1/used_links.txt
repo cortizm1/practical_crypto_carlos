@@ -6,3 +6,12 @@ https://www.geeksforgeeks.org/python/get-current-date-and-time-using-python/
 https://stackoverflow.com/questions/18982610/difference-between-except-and-except-exception-as-e#18982726
 https://www.geeksforgeeks.org/python/reading-writing-text-files-python/
 https://stackoverflow.com/questions/5137497/ddg#5137509
+https://www.pythonmorsels.com/TextIOWrapper/#
+https://www.geeksforgeeks.org/python/what-is-a-modulo-operator-in-python/
+https://www.py4u.org/blog/python-setting-an-element-of-a-numpy-matrix/
+https://stackoverflow.com/questions/5891410/numpy-array-initialization-fill-with-identical-values
+https://www.pythonpool.com/python-round-down/
+https://docs.astral.sh/uv/getting-started/features/#the-pip-interface
+https://pytutorial.com/python-letter-to-number-conversion-guide/
+https://stackoverflow.com/questions/7585435/how-to-convert-string-to-bytes-in-python-3
+https://numpy.org/doc/stable/reference/generated/numpy.mod.html
