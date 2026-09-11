@@ -15,3 +15,8 @@ https://docs.astral.sh/uv/getting-started/features/#the-pip-interface
 https://pytutorial.com/python-letter-to-number-conversion-guide/
 https://stackoverflow.com/questions/7585435/how-to-convert-string-to-bytes-in-python-3
 https://numpy.org/doc/stable/reference/generated/numpy.mod.html
+https://numpy.org/doc/stable/reference/generated/numpy.ndarray.flatten.html
+https://numpy.org/doc/stable/reference/generated/numpy.ndarray.tolist.html
+https://pythonexamples.org/python-join-list-with-space/
+https://www.geeksforgeeks.org/python/writing-to-file-in-python/
+https://numpy.org/devdocs/reference/generated/numpy.where.html

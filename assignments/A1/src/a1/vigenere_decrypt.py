@@ -57,7 +57,7 @@ def cyphertext_reader(cyphertext_filename:str):
             with open(full_path[1], "r") as file:
                 cyphertext_blob = file.read()
                 cyphertext_blob = [(l - 64) for l in cyphertext_blob.upper().encode() if (64<int(l)<=90)] #utf-8 encoding, and bytes to [1-26]
-                return cyphertext_blob
+                return cyphertext_blob, len(cyphertext_blob)
     except Exception as e:
         error_writer(e, description=f"Error while reading {cyphertext_filename}.")
 
@@ -86,41 +86,38 @@ def cyphertext_digitizer_and_matrixator(cyphertext_blob:list, key:str):
 def matrix_encipherer(cyphertext_blob_matrix:np.ndarray, digitized_key:list): #needs to be numpy array/matrix
     try:
         # column-based matrix sums
-        cyphertext_blob_matrix_ciphered = (cyphertext_blob_matrix + digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
-        return cyphertext_blob_matrix_ciphered
+        plaintext_blob_matrix_ciphered = (cyphertext_blob_matrix - digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
+        plaintext_blob_matrix_ciphered = np.where(plaintext_blob_matrix_ciphered > 0, plaintext_blob_matrix_ciphered, plaintext_blob_matrix_ciphered + 26)
+        return plaintext_blob_matrix_ciphered
     except Exception as e:
         error_writer(e, description=f"Error while enciphering the matrix.")
 
-@function_logger
-def matrix_decryption_bytes(cyphertext_blob_matrix_ciphered:np.ndarray):
+@function_logger_too
+def matrix_to_texter(plaintext_blob_matrix_ciphered:np.ndarray, blob_length:int):
     try:
         # numpy to utf-8 format
-        plaintext_blob_matrix = cyphertext_blob_matrix_ciphered
-
-        # numpy to list dump
-
-        # list decoding to string
-        
-        return plaintext_blob_matrix
+        plaintext_blob_matrix = plaintext_blob_matrix_ciphered.flatten() #64 does not work as of right now
+        plaintext_blob_matrix = [chr(int(l + 64)) for l in plaintext_blob_matrix]
+        decrypted_blob_matrix = ''.join(plaintext_blob_matrix)
+        return decrypted_blob_matrix[:blob_length]
     except Exception as e:
-        error_writer(e)
+        error_writer(e, description=f"Error going from a matrix to utf-8, to strings.")
 
-@function_logger
-def matrix_alphabetization_and_dumper(plaintext_blob_matrix):
+@function_logger_too
+def plaintext_writeout(plaintext_blob:str, cyphertext_filename:str):
     try:
-        plaintext_blob = plaintext_blob_matrix
-        return plaintext_blob
-    except Exception as e:
-        error_writer(e)
+        dir_ = os.path.dirname(os.path.realpath(__file__))
+        full_path = os.path.join(dir_, str(cyphertext_filename[:-4] + "_decrypted.txt"))
 
-@function_logger
-def plaintext_writeout(plaintext_blob:str):
-    try:
+        # i'm never checking the full_path... but that's ok I guess
+        with open(full_path, "w") as file:
+            plaintext_blob_ = file.write(plaintext_blob)
+            return True
         #writeout and bool upon success/failure
-        writeout_confirmation = plaintext_blob
-        return True
+        #writeout_confirmation = plaintext_blob
     except Exception as e:
-        error_writer(e)
+        error_writer(e, description="Error on final file writeout.")
+        return False
 
 def main(argv=None):
 
@@ -140,12 +137,11 @@ def main(argv=None):
     t = datetime.datetime.now()
     logger.info(f'\t{t}\tStarting decryption of {args.encrpyted_text_name} using key {args.key}')
 
-    extracted_text_blob = cyphertext_reader(args.encrpyted_text_name)
+    extracted_text_blob, blob_length = cyphertext_reader(args.encrpyted_text_name)
     blob_matrix, digitized_key = cyphertext_digitizer_and_matrixator(extracted_text_blob, args.key)
     blob_matrix_ciphered = matrix_encipherer(blob_matrix, digitized_key)
-    decrypted_blob_matrix = matrix_decryption_bytes(blob_matrix_ciphered)
-    decrypted_blob = matrix_alphabetization_and_dumper(decrypted_blob_matrix)
-    writeout_confirmation = plaintext_writeout(decrypted_blob)
+    final_letter_blob = matrix_to_texter(blob_matrix_ciphered, blob_length)
+    writeout_confirmation = plaintext_writeout(final_letter_blob, args.encrpyted_text_name)
     print(f"Success status:\t{writeout_confirmation}")
 
 if __name__ == "__main__":
