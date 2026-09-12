@@ -34,11 +34,11 @@ def error_writer(e:Exception, description:str):
     logger.error(f"{t}\t{description}\t{e}")
 
 @function_logger
-def source_dir_walker(cyphertext_filename):
+def source_dir_walker(ciphertext_filename):
     try:
         #looking for files under the directory
         dir_ = os.path.dirname(os.path.realpath(__file__))
-        full_path = os.path.join(dir_, cyphertext_filename)
+        full_path = os.path.join(dir_, ciphertext_filename)
 
         if os.path.isfile(full_path):
             return (True, full_path)
@@ -46,47 +46,47 @@ def source_dir_walker(cyphertext_filename):
             logger.warning(f"404. File not found under {dir_}")
             return (False, "")
     except Exception as e:
-        error_writer(e, description=f"{cyphertext_filename} not found.")
+        error_writer(e, description=f"{ciphertext_filename} not found.")
 
 @function_logger
-def cyphertext_reader(cyphertext_filename:str):
+def ciphertext_reader(ciphertext_filename:str):
     try:
         # shutil or something walk to and read from the .txt
-        full_path = source_dir_walker(cyphertext_filename)
+        full_path = source_dir_walker(ciphertext_filename)
         if full_path[0]:
             with open(full_path[1], "r") as file:
-                cyphertext_blob = file.read()
-                cyphertext_blob = [(l - 64) for l in cyphertext_blob.upper().encode() if (64<int(l)<=90)] #utf-8 encoding, and bytes to [1-26]
-                return cyphertext_blob, len(cyphertext_blob)
+                ciphertext_blob = file.read()
+                ciphertext_blob = [(l - 64) for l in ciphertext_blob.upper().encode() if (64<int(l)<=90)] #utf-8 encoding, and bytes to [1-26]
+                return ciphertext_blob, len(ciphertext_blob)
     except Exception as e:
-        error_writer(e, description=f"Error while reading {cyphertext_filename}.")
+        error_writer(e, description=f"Error while reading {ciphertext_filename}.")
 
 @function_logger_too
-def cyphertext_digitizer_and_matrixator(cyphertext_blob:list, key:str):
+def ciphertext_digitizer_and_matrixator(ciphertext_blob:list, key:str):
     try:
         digitized_key = [(k - 64) for k in key.upper().encode() if (64<int(k)<=90)]
         key_length = len(digitized_key)
 
         index_ = 1
         row_ = 0
-        cyphertext_blob_matrix = np.full((int(len(cyphertext_blob) / (key_length) + 1), key_length), 0) # the +1 is not perfect stuff
+        ciphertext_blob_matrix = np.full((int(len(ciphertext_blob) / (key_length) + 1), key_length), 0) # the +1 is not perfect stuff
 
-        # blob populates a matrix, could be while streaming the cyphertext.txt but for now kept separate
-        for cl in cyphertext_blob:
+        # blob populates a matrix, could be while streaming the ciphertext.txt but for now kept separate
+        for cl in ciphertext_blob:
             column = ((index_-1) % key_length)
-            cyphertext_blob_matrix[row_, column] = cl
+            ciphertext_blob_matrix[row_, column] = cl
             row_shifter = 1 if (int((index_) % key_length) == 0 and index_ != 0) else 0
             row_ = row_ + row_shifter
             index_ = index_ + 1
-        return cyphertext_blob_matrix, digitized_key
+        return ciphertext_blob_matrix, digitized_key
     except Exception as e:
         error_writer(e, description=f"Error while turning .txt into a digitized matrix.")
 
 @function_logger_too
-def matrix_encipherer(cyphertext_blob_matrix:np.ndarray, digitized_key:list): #needs to be numpy array/matrix
+def matrix_encipherer(ciphertext_blob_matrix:np.ndarray, digitized_key:list): #needs to be numpy array/matrix
     try:
         # column-based matrix sums
-        plaintext_blob_matrix_ciphered = (cyphertext_blob_matrix - digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
+        plaintext_blob_matrix_ciphered = (ciphertext_blob_matrix - digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
         plaintext_blob_matrix_ciphered = np.where(plaintext_blob_matrix_ciphered > 0, plaintext_blob_matrix_ciphered, plaintext_blob_matrix_ciphered + 26)
         return plaintext_blob_matrix_ciphered
     except Exception as e:
@@ -104,10 +104,10 @@ def matrix_to_texter(plaintext_blob_matrix_ciphered:np.ndarray, blob_length:int)
         error_writer(e, description=f"Error going from a matrix to utf-8, to strings.")
 
 @function_logger_too
-def plaintext_writeout(plaintext_blob:str, cyphertext_filename:str):
+def plaintext_writeout(plaintext_blob:str, ciphertext_filename:str):
     try:
         dir_ = os.path.dirname(os.path.realpath(__file__))
-        full_path = os.path.join(dir_, str(cyphertext_filename[:-4] + "_decrypted.txt"))
+        full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_decrypted.txt"))
 
         # i'm never checking the full_path... but that's ok I guess
         with open(full_path, "w") as file:
@@ -121,7 +121,7 @@ def plaintext_writeout(plaintext_blob:str, cyphertext_filename:str):
 
 def main(argv=None):
 
-    description = "A vigenere decypherer written in Python."
+    description = "A vigenere decipherer written in Python."
 
     ap = argparse.ArgumentParser(prog="vigenere_decrypt.py", description=description,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -137,8 +137,8 @@ def main(argv=None):
     t = datetime.datetime.now()
     logger.info(f'\t{t}\tStarting decryption of {args.encrpyted_text_name} using key {args.key}')
 
-    extracted_text_blob, blob_length = cyphertext_reader(args.encrpyted_text_name)
-    blob_matrix, digitized_key = cyphertext_digitizer_and_matrixator(extracted_text_blob, args.key)
+    extracted_text_blob, blob_length = ciphertext_reader(args.encrpyted_text_name)
+    blob_matrix, digitized_key = ciphertext_digitizer_and_matrixator(extracted_text_blob, args.key)
     blob_matrix_ciphered = matrix_encipherer(blob_matrix, digitized_key)
     final_letter_blob = matrix_to_texter(blob_matrix_ciphered, blob_length)
     writeout_confirmation = plaintext_writeout(final_letter_blob, args.encrpyted_text_name)

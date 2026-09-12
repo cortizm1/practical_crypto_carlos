@@ -1,0 +1,2 @@
+Possible keylength candidates.
+Keylength:11	Ioc Value:0.06468181818181817

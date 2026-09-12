@@ -20,3 +20,12 @@ https://numpy.org/doc/stable/reference/generated/numpy.ndarray.tolist.html
 https://pythonexamples.org/python-join-list-with-space/
 https://www.geeksforgeeks.org/python/writing-to-file-in-python/
 https://numpy.org/devdocs/reference/generated/numpy.where.html
+https://numpy.org/doc/stable/reference/generated/numpy.ndarray.shape.html
+https://stackoverflow.com/questions/8386675/extracting-specific-columns-in-numpy-array
+https://www.geeksforgeeks.org/python/python-get-unique-values-list/
+https://stackoverflow.com/questions/13909052/how-do-i-add-together-integers-in-a-list-sum-a-list-of-numbers-in-python#13909132
+https://stackoverflow.com/questions/455612/limiting-floats-to-two-decimal-points
+https://www.geeksforgeeks.org/python/python-program-for-bubble-sort/
+https://pages.mtu.edu/~shene/NSF-4/Tutorial/VIG/Vig-IOC.html
+https://www.dcode.fr/index-coincidence
+https://www.geeksforgeeks.org/python/ternary-operator-in-python/
