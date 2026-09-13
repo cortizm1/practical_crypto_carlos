@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 import os
 
-from itertools import permutations
+from itertools import permutations, chain
 
 import numpy as np
 
@@ -82,7 +82,7 @@ def ciphertext_digitizer_and_matrixator(ciphertext_blob:list, keylength:int):
         error_writer(e, description=f"Error while turning .txt into a digitized matrix.")
 
 @function_logger
-def ioc_matrix_frequency_computer(column_:np.ndarray):
+def matrix_frequency_computer(column_:np.ndarray):
     try:
         unique_ = list(set(column_))
         column_frequencies_ = []
@@ -130,62 +130,109 @@ def cipher_combinatorics(tops_prob_dist):
     (24, 0.00150), (25, 0.01974), (26, 0.00074)]
 
     letters_distribution = sort_algo(letters_distribution)
-    letters_distribution_lower = letters_distribution[:4]
-    letters_distribution_upper = letters_distribution[(len(letters_distribution)-6):]
 
+    letters_distribution_lower = letters_distribution[:4]
     tops_prob_dist_lower = tops_prob_dist[:4]
-    tops_prob_dist_upper = tops_prob_dist[(len(tops_prob_dist)-6):]
 
     permutation_lower = []
     for i, args in enumerate(permutations([i for i in range(len(letters_distribution_lower))])):
-        a,b,c,d = args
+        unique_ = [((tops_prob_dist_lower[args[l]][0] - letters_distribution_lower[l][0]) % 26) for l in range(len(args))]
+        unique_checker = permutation_lower.append(unique_) if (len(set(unique_)) < 3) else False # might need to relax this...
 
-        unique_ = [
-            ((tops_prob_dist_lower[a][0] - letters_distribution_lower[0][0]) % 26),
-            ((tops_prob_dist_lower[b][0] - letters_distribution_lower[1][0]) % 26),
-            ((tops_prob_dist_lower[c][0] - letters_distribution_lower[2][0]) % 26),
-            ((tops_prob_dist_lower[d][0] - letters_distribution_lower[3][0]) % 26)
-        ]
-
-        unique_checker = permutation_lower.append(unique_) if (len(set(unique_)) < 2) else False
+    letters_distribution_upper = letters_distribution[(len(letters_distribution)-6):]
+    tops_prob_dist_upper = tops_prob_dist[(len(tops_prob_dist)-6):]
 
     permutation_upper = []
     for i, args in enumerate(permutations([i for i in range(len(letters_distribution_upper))])):
-        a,b,c,d,e,f = args
+        unique_ = [((tops_prob_dist_upper[args[l]][0] - letters_distribution_upper[l][0]) % 26) for l in range(len(args))]
+        unique_checker = permutation_upper.append(unique_) if (len(set(unique_)) < 3) else False # might need to relax this...
 
-        unique_ = [
-            ((tops_prob_dist_upper[a][0] - letters_distribution_upper[0][0]) % 26),
-            ((tops_prob_dist_upper[b][0] - letters_distribution_upper[1][0]) % 26),
-            ((tops_prob_dist_upper[c][0] - letters_distribution_upper[2][0]) % 26),
-            ((tops_prob_dist_upper[d][0] - letters_distribution_upper[3][0]) % 26),
-            ((tops_prob_dist_upper[e][0] - letters_distribution_upper[4][0]) % 26),
-            ((tops_prob_dist_upper[f][0] - letters_distribution_upper[5][0]) % 26)
-        ]
+    permutation_lower = [list(set(permutation_lower[0]))] if len(permutation_lower)==1 else [list(set(x)) for x in permutation_lower]
+    permutation_upper = [list(set(permutation_upper[0]))] if len(permutation_upper)==1 else [list(set(x)) for x in permutation_upper]
 
-        unique_checker = permutation_upper.append(unique_) if (len(set(unique_)) < 2) else False
+    joined_permutations_ = permutation_lower + permutation_upper
+    joined_permutations =  list(set(chain.from_iterable(joined_permutations_))) #there are clearly most likely candidates... in case our postprocessing step doesn't work we come back here
+    
+    all_inclusive_permutations = []
+    
+    for x in joined_permutations:
+        all_inclusive = True
+        for l in joined_permutations_:
+            if x not in l:
+                all_inclusive = False
+                break
 
-    #letters_distribution = letters_distribution_lower + letters_distribution_upper
-    #tops_distances = [((tops_prob_dist[i][0] - letters_distribution[i][0]) % 26) for i in range(len(letters_distribution))]
-    permutation_lower = permutation_lower[0] if len(permutation_upper)==1 else permutation_lower
-    permutation_upper = permutation_upper[0] if len(permutation_upper)==1 else permutation_upper
-    joined_permutations = list(set(permutation_upper + permutation_lower))
-    print(joined_permutations)
-    return joined_permutations
+        if all_inclusive:
+            all_inclusive_permutations.append(x)
+
+    return all_inclusive_permutations if len(all_inclusive_permutations)>0 else joined_permutations
+
+@function_logger
+def sort_algo_too(list_iocs_:list):
+    try:
+        tuple_length = len(list_iocs_)
+
+        for i in range(tuple_length):
+            final_position = False
+            for j in range(0, tuple_length - i - 1):
+                if list_iocs_[j][0] > list_iocs_[j + 1][0]:
+                    list_iocs_[j], list_iocs_[j + 1] = list_iocs_[j + 1], list_iocs_[j]
+                    final_position = True
+            if not final_position:
+                break
+
+        return list_iocs_
+    except Exception as e:
+        error_writer(e, description=f"Error while filtering ioc list.")
 
 @function_logger_too
-def monoal_matrix_distribution_computer(frequency_tuples, blob_length:int):
+def k_squared(prob_dist_tuples:tuple, possible_key:int):
     try:
-        sum_prob_dist = 0.00
-        frequency_tuples_ = sort_algo(frequency_tuples[0]) # top 6 and top6n't
-        frequency_tuples_ = frequency_tuples_[:4] + frequency_tuples_[(len(frequency_tuples_)-6):]
-        tops_prob_dist = [prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples_]
+
+        # hardcoded english language letter frequency distribution
+        letters_distribution = [(1, 0.08167), (2, 0.01492), (3, 0.02782), (4, 0.04253), (5, 0.12702), (6, 0.02228), (7, 0.02015), 
+        (8, 0.06094), (9, 0.06966), (10, 0.00153), (11, 0.00772), (12, 0.04025), (13, 0.02406), (14, 0.06749), (15, 0.07507), 
+        (16, 0.01929), (17, 0.00095), (18, 0.05987), (19, 0.06327), (20, 0.09056), (21, 0.02758), (22, 0.00978), (23, 0.02360), 
+        (24, 0.00150), (25, 0.01974), (26, 0.00074)]
+
+        #letters_distribution = sort_algo(letters_distribution)
+        plaintexted_prob_dist = [(((l-possible_key)%26)+1, prob) for l, prob in prob_dist_tuples] # the plus one is key here... else we get 0-25 letter indexes
+        #print(plaintexted_prob_dist)
+        plaintexted_prob_dist = sort_algo_too(plaintexted_prob_dist)
+
+        sum_k_squared = []
+
+        # prob_dist bound to an actual letter now (we have the possible key)
+        for l, prob in plaintexted_prob_dist: # it might be the case not all letters are used
+            for i in letters_distribution:
+                if i[0] == l:
+                    k_squared = (prob - i[1])**2
+                    sum_k_squared.append(k_squared)
+                    break
+
+        return possible_key, sum(sum_k_squared) #ntimes_*(freq_/blob_length)**2
+    except Exception as e:
+        error_writer(e, description=f"Error while computing p_squared.")
+
+@function_logger_too
+def monoal_cryptanalyzer(frequency_tuples, blob_length:int):
+    try:
+        frequency_tuples_complete = sort_algo(frequency_tuples[0]) # top 6 and top6n't
+        prob_dist_complete = [prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples_complete]
+
+        #frequency_tuples_ = frequency_tuples_complete[:4] + frequency_tuples_complete[(len(frequency_tuples_)-6):]
+        tops_prob_dist = prob_dist_complete[:4] + prob_dist_complete[(len(prob_dist_complete)-6):] #[prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples_]
         validated_combinatronics = cipher_combinatorics(tops_prob_dist) # monoalphabetism makes it easier (linear?) to find pairings... as they are 1-to-1
-        return round(sum_prob_dist)
+                
+        candidate_best_possible_keys = [k_squared(prob_dist_complete, pkey) for pkey in validated_combinatronics] if len(validated_combinatronics)>1 else (validated_combinatronics[0], 0)
+        # if there is more than 1 candidate we send them all as is... we first want to check if another keylength has a 1-to-1 match
+        # we could set breaks for the case 1-to-1 matches are found... but we leaving it as is for now
+        return candidate_best_possible_keys
     except Exception as e:
         error_writer(e, description=f"Error while computing per matrix iocs.")
 
 @function_logger
-def avg_ioc_per_matrix(matrix):
+def candidate_keys_keylengths_arbitrage(list_lists_candidates:list):
     try:
         # good ol' for loop
         matrix_ = 0.00
@@ -197,12 +244,15 @@ def avg_ioc_per_matrix(matrix):
     except Exception as e:
         error_writer(e, description=f"Error while computing average matrix ioc.")
 
-@function_logger_too
-def ioc_matrix_computer(ciphertext_matrix:np.ndarray, blob_length:int):
+@function_logger
+def single_matrix_cryptanalizer(ciphertext_matrix:np.ndarray):
     try:
-        matrix_frequencies = [ioc_matrix_frequency_computer(ciphertext_matrix[1][:,i]) for i in range(0, ciphertext_matrix[0])]
+        matrix_frequencies = [matrix_frequency_computer(ciphertext_matrix[1][:,i]) for i in range(0, ciphertext_matrix[0])]
         # so I have the n number of monoalphabetic ciphers, now its time to figure out the actual key
-        ioc_calcs_ = [monoal_matrix_distribution_computer(list_tuple_, column_freqs_) for *list_tuple_, column_freqs_ in matrix_frequencies]
+        candidate_best_possible_keys_keylengths = [monoal_cryptanalyzer(list_tuple_, column_freqs_) for *list_tuple_, column_freqs_ in matrix_frequencies]
+        print(candidate_best_possible_keys_keylengths)
+        # candidate arbitrage... if there is a 1-to-1 match we use it... else we do something else
+        candidate_best_possible_keys = candidate_keys_keylengths_arbitrage(candidate_best_possible_keys_keylengths) # doing a top 7 if not 1-to-1 type of thing
         return avg_ioc_per_matrix(ioc_calcs_) #averaging since the theory is vigenere is acting as collections of monoaplphabetic ciphers sequencing out
     except Exception as e:
         error_writer(e, description=f"Error while computing all matrix iocs.")
@@ -244,10 +294,10 @@ def factorial_collapser(list_iocs_:list):
 @function_logger_too
 def ioc_search(extracted_text_blob:list, blob_length:int): #needs to be numpy array/matrix
     try:
-        list_keylengths = [6] #hardcoding for now
+        list_keylengths = [3] #hardcoding for now
         ciphertext_matrices = []
         [ciphertext_matrices.append([i, ciphertext_digitizer_and_matrixator(extracted_text_blob, i)]) for i in list_keylengths]
-        ciphertext_iocs = [(l[0], ioc_matrix_computer(l, blob_length)) for l in ciphertext_matrices]
+        ciphertext_iocs = [(l[0], single_matrix_cryptanalizer(l)) for l in ciphertext_matrices]
         # now ordering, filtering out, and considering the factorial possibility
         filtered_iocs = factorial_collapser(ioc_filterer(sort_algo(ciphertext_iocs)))
         return filtered_iocs

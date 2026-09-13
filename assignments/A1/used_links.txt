@@ -30,3 +30,4 @@ https://pages.mtu.edu/~shene/NSF-4/Tutorial/VIG/Vig-IOC.html
 https://www.dcode.fr/index-coincidence
 https://www.geeksforgeeks.org/python/ternary-operator-in-python/
 https://www.geeksforgeeks.org/python/generate-all-the-permutation-of-a-list-in-python/
+https://www.geeksforgeeks.org/python/flatten-a-list-of-lists-in-python/
