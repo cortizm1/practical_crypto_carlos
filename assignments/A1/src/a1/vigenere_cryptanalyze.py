@@ -6,6 +6,8 @@ logger = logging.getLogger(__name__)
 
 import os
 
+from itertools import permutations
+
 import numpy as np
 
 def function_logger(func, *args): #
@@ -84,7 +86,8 @@ def ioc_matrix_frequency_computer(column_:np.ndarray):
     try:
         unique_ = list(set(column_))
         column_frequencies_ = []
-        [column_frequencies_.append((int(i), list(column_).count(i))) for i in unique_] #using lists instead of the would be numpy equivalents (easier)
+        [column_frequencies_.append((int(i), list(column_).count(i))) for i in unique_ if i !=0] #using lists instead of the would be numpy equivalents (easier)
+        # also the !=0 helps a lot, since matrices were coming with those extra 0s I introduced as kind of padding when initializing the matrices
         # pseudo recursive frequency of frequencies thingy
         return column_frequencies_, len(column_)
     except Exception as e:
@@ -113,22 +116,70 @@ def sort_algo(list_iocs_:list):
             if not final_position:
                 break
 
-        return list_iocs_[:5]+list_iocs_[-6:]
+        return list_iocs_
     except Exception as e:
         error_writer(e, description=f"Error while filtering ioc list.")
 
 @function_logger
-def cipher_combinatorics():
-    print()
+def cipher_combinatorics(tops_prob_dist):
 
+    # hardcoded english language letter frequency distribution
+    letters_distribution = [(1, 0.08167), (2, 0.01492), (3, 0.02782), (4, 0.04253), (5, 0.12702), (6, 0.02228), (7, 0.02015), 
+    (8, 0.06094), (9, 0.06966), (10, 0.00153), (11, 0.00772), (12, 0.04025), (13, 0.02406), (14, 0.06749), (15, 0.07507), 
+    (16, 0.01929), (17, 0.00095), (18, 0.05987), (19, 0.06327), (20, 0.09056), (21, 0.02758), (22, 0.00978), (23, 0.02360), 
+    (24, 0.00150), (25, 0.01974), (26, 0.00074)]
+
+    letters_distribution = sort_algo(letters_distribution)
+    letters_distribution_lower = letters_distribution[:4]
+    letters_distribution_upper = letters_distribution[(len(letters_distribution)-6):]
+
+    tops_prob_dist_lower = tops_prob_dist[:4]
+    tops_prob_dist_upper = tops_prob_dist[(len(tops_prob_dist)-6):]
+
+    permutation_lower = []
+    for i, args in enumerate(permutations([i for i in range(len(letters_distribution_lower))])):
+        a,b,c,d = args
+
+        unique_ = [
+            ((tops_prob_dist_lower[a][0] - letters_distribution_lower[0][0]) % 26),
+            ((tops_prob_dist_lower[b][0] - letters_distribution_lower[1][0]) % 26),
+            ((tops_prob_dist_lower[c][0] - letters_distribution_lower[2][0]) % 26),
+            ((tops_prob_dist_lower[d][0] - letters_distribution_lower[3][0]) % 26)
+        ]
+
+        unique_checker = permutation_lower.append(unique_) if (len(set(unique_)) < 2) else False
+
+    permutation_upper = []
+    for i, args in enumerate(permutations([i for i in range(len(letters_distribution_upper))])):
+        a,b,c,d,e,f = args
+
+        unique_ = [
+            ((tops_prob_dist_upper[a][0] - letters_distribution_upper[0][0]) % 26),
+            ((tops_prob_dist_upper[b][0] - letters_distribution_upper[1][0]) % 26),
+            ((tops_prob_dist_upper[c][0] - letters_distribution_upper[2][0]) % 26),
+            ((tops_prob_dist_upper[d][0] - letters_distribution_upper[3][0]) % 26),
+            ((tops_prob_dist_upper[e][0] - letters_distribution_upper[4][0]) % 26),
+            ((tops_prob_dist_upper[f][0] - letters_distribution_upper[5][0]) % 26)
+        ]
+
+        unique_checker = permutation_upper.append(unique_) if (len(set(unique_)) < 2) else False
+
+    #letters_distribution = letters_distribution_lower + letters_distribution_upper
+    #tops_distances = [((tops_prob_dist[i][0] - letters_distribution[i][0]) % 26) for i in range(len(letters_distribution))]
+    permutation_lower = permutation_lower[0] if len(permutation_upper)==1 else permutation_lower
+    permutation_upper = permutation_upper[0] if len(permutation_upper)==1 else permutation_upper
+    joined_permutations = list(set(permutation_upper + permutation_lower))
+    print(joined_permutations)
+    return joined_permutations
 
 @function_logger_too
 def monoal_matrix_distribution_computer(frequency_tuples, blob_length:int):
     try:
         sum_prob_dist = 0.00
-        frequency_tuples = sort_algo(frequency_tuples[0]) # top 6 and top6n't
-        tops_prob_dist = [prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples]
-        validated_combinatronics = cipher_combinatorics() # monoalphabetism makes it easier (linear?) to find pairings... as they are 1-to-1
+        frequency_tuples_ = sort_algo(frequency_tuples[0]) # top 6 and top6n't
+        frequency_tuples_ = frequency_tuples_[:4] + frequency_tuples_[(len(frequency_tuples_)-6):]
+        tops_prob_dist = [prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples_]
+        validated_combinatronics = cipher_combinatorics(tops_prob_dist) # monoalphabetism makes it easier (linear?) to find pairings... as they are 1-to-1
         return round(sum_prob_dist)
     except Exception as e:
         error_writer(e, description=f"Error while computing per matrix iocs.")
