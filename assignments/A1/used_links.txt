@@ -31,3 +31,5 @@ https://www.dcode.fr/index-coincidence
 https://www.geeksforgeeks.org/python/ternary-operator-in-python/
 https://www.geeksforgeeks.org/python/generate-all-the-permutation-of-a-list-in-python/
 https://www.geeksforgeeks.org/python/flatten-a-list-of-lists-in-python/
+https://stackoverflow.com/questions/10797819/finding-the-mode-of-a-list#28129716
+https://www.askpython.com/python/examples/mean-and-standard-deviation-python

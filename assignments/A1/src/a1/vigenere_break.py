@@ -120,100 +120,52 @@ def sort_algo(list_iocs_:list):
     except Exception as e:
         error_writer(e, description=f"Error while filtering ioc list.")
 
-@function_logger_too
-def permutation_generator(generic_letters_distribution:list, actual_letters_distribution:list):
-    try:
-        worst_case = len(generic_letters_distribution)
-        permutation_space = []
-
-        for i, args in enumerate(permutations([i for i in range(len(generic_letters_distribution))])):
-            unique_ = [((actual_letters_distribution[args[l]][0] - generic_letters_distribution[l][0]) % 26) for l in range(len(args))]
-            _ = permutation_space.append(unique_) if (len(set(unique_)) <= worst_case) else False#
-            worst_case = len(set(unique_)) if (len(set(unique_)) <= worst_case) else worst_case
-
-        permutation_space = [perm for perm in permutation_space if (len(set(perm))) <= worst_case]
-        return permutation_space
-    except Exception as e:
-        error_writer(e, description=f"Error while generating a possible small permutation subspace.")
-
-@function_logger
-def all_inclusive_permutation_checker(lists_permutations:list):
-    try:
-        permutation_candidates_joined =  list(set(chain.from_iterable(lists_permutations))) #there are clearly most likely candidates... in case our postprocessing step doesn't work we come back here
-
-        all_inclusive_permutations = []
-        
-        for x in permutation_candidates_joined:
-
-            all_inclusive = True
-            for l in lists_permutations:
-                if x not in l:
-                    all_inclusive = False
-                    break
-
-            if all_inclusive:
-                all_inclusive_permutations.append(x)
-
-        if len(all_inclusive_permutations)<1:
-            all_inclusive_permutations = permutation_candidates_joined
-
-        return all_inclusive_permutations
-    except Exception as e:
-        error_writer(e, description=f"Error while filtering by all inclusive permutations.")
-
-@function_logger
-def mode_of_modes_and_perm_space_mode(lists_permutations:list):
-    try:
-        permutation_candidates_joined =  list(set(chain.from_iterable(lists_permutations)))
-        perm_space_mode = max(set(permutation_candidates_joined), key=permutation_candidates_joined.count)
-
-        mode_of_modes = [max(set(l), key=l.count) for l in lists_permutations]
-        mode_of_modes = max(set(mode_of_modes), key=mode_of_modes.count)
-
-        return [perm_space_mode, mode_of_modes]
-    except Exception as e:
-        error_writer(e, description=f"Error while computating permutation related modes.")
-
 @function_logger
 def cipher_combinatorics(tops_prob_dist):
-    try:
-        # hardcoded english language letter frequency distribution
-        letters_distribution = [(1, 0.08167), (2, 0.01492), (3, 0.02782), (4, 0.04253), (5, 0.12702), (6, 0.02228), (7, 0.02015), 
-        (8, 0.06094), (9, 0.06966), (10, 0.00153), (11, 0.00772), (12, 0.04025), (13, 0.02406), (14, 0.06749), (15, 0.07507), 
-        (16, 0.01929), (17, 0.00095), (18, 0.05987), (19, 0.06327), (20, 0.09056), (21, 0.02758), (22, 0.00978), (23, 0.02360), 
-        (24, 0.00150), (25, 0.01974), (26, 0.00074)]
 
-        letters_distribution = sort_algo(letters_distribution)
+    # hardcoded english language letter frequency distribution
+    letters_distribution = [(1, 0.08167), (2, 0.01492), (3, 0.02782), (4, 0.04253), (5, 0.12702), (6, 0.02228), (7, 0.02015), 
+    (8, 0.06094), (9, 0.06966), (10, 0.00153), (11, 0.00772), (12, 0.04025), (13, 0.02406), (14, 0.06749), (15, 0.07507), 
+    (16, 0.01929), (17, 0.00095), (18, 0.05987), (19, 0.06327), (20, 0.09056), (21, 0.02758), (22, 0.00978), (23, 0.02360), 
+    (24, 0.00150), (25, 0.01974), (26, 0.00074)]
 
-        letters_distribution_lower = letters_distribution[:4]
-        tops_prob_dist_lower = tops_prob_dist[:4]
+    letters_distribution = sort_algo(letters_distribution)
 
-        permutation_lower = permutation_generator(letters_distribution_lower, tops_prob_dist_lower)
-        all_inclusive_lower = all_inclusive_permutation_checker(permutation_lower)
-        modes_lower = mode_of_modes_and_perm_space_mode(permutation_lower)
+    letters_distribution_lower = letters_distribution[:4]
+    tops_prob_dist_lower = tops_prob_dist[:4]
 
-        letters_distribution_upper = letters_distribution[(len(letters_distribution)-6):]
-        tops_prob_dist_upper = tops_prob_dist[(len(tops_prob_dist)-6):]
+    permutation_lower = []
+    for i, args in enumerate(permutations([i for i in range(len(letters_distribution_lower))])):
+        unique_ = [((tops_prob_dist_lower[args[l]][0] - letters_distribution_lower[l][0]) % 26) for l in range(len(args))]
+        unique_checker = permutation_lower.append(unique_) if (len(set(unique_)) < 3) else False # might need to relax this...
 
-        permutation_upper = permutation_generator(letters_distribution_upper, tops_prob_dist_upper)
-        all_inclusive_upper = all_inclusive_permutation_checker(permutation_upper)
-        modes_upper = mode_of_modes_and_perm_space_mode(permutation_upper)
+    letters_distribution_upper = letters_distribution[(len(letters_distribution)-6):]
+    tops_prob_dist_upper = tops_prob_dist[(len(tops_prob_dist)-6):]
 
-        modes_set = list(set(modes_lower + modes_upper))
+    permutation_upper = []
+    for i, args in enumerate(permutations([i for i in range(len(letters_distribution_upper))])):
+        unique_ = [((tops_prob_dist_upper[args[l]][0] - letters_distribution_upper[l][0]) % 26) for l in range(len(args))]
+        unique_checker = permutation_upper.append(unique_) if (len(set(unique_)) < 3) else False # might need to relax this...
 
-        # three tiered system... 80% show up or all inclusive mode (both all inclusives) | or set of modes plus smaller all inclusive set | or all else left in filtered down sets
-        shared_list = modes_set+all_inclusive_lower+all_inclusive_upper
+    permutation_lower = [list(set(permutation_lower[0]))] if len(permutation_lower)==1 else [list(set(x)) for x in permutation_lower]
+    permutation_upper = [list(set(permutation_upper[0]))] if len(permutation_upper)==1 else [list(set(x)) for x in permutation_upper]
 
-        first_tier_candidates = list(set([i for i in shared_list if i in modes_set and i in all_inclusive_lower and i in all_inclusive_upper]))
+    joined_permutations_ = permutation_lower + permutation_upper
+    joined_permutations =  list(set(chain.from_iterable(joined_permutations_))) #there are clearly most likely candidates... in case our postprocessing step doesn't work we come back here
+    
+    all_inclusive_permutations = []
+    
+    for x in joined_permutations:
+        all_inclusive = True
+        for l in joined_permutations_:
+            if x not in l:
+                all_inclusive = False
+                break
 
-        second_tier_candidates = list(set(all_inclusive_upper + modes_set)) if len(all_inclusive_upper) <= len(all_inclusive_lower) else list(set(all_inclusive_lower + modes_set))
-        second_tier_candidates = [i for i in second_tier_candidates if i not in first_tier_candidates]
+        if all_inclusive:
+            all_inclusive_permutations.append(x)
 
-        third_tier_candidates = list(set([i for i in shared_list if i not in first_tier_candidates and i not in second_tier_candidates]))
-
-        return first_tier_candidates, second_tier_candidates, third_tier_candidates
-    except Exception as e:
-        error_writer(e, description=f"Error while doing the permutation combinatronics.")
+    return all_inclusive_permutations if len(all_inclusive_permutations)>0 else joined_permutations
 
 @function_logger
 def sort_algo_too(list_iocs_:list):
@@ -263,38 +215,6 @@ def k_squared(prob_dist_tuples:tuple, possible_key:int):
         error_writer(e, description=f"Error while computing p_squared.")
 
 @function_logger_too
-def layered_possible_letter_handler(prob_dist_tuples:tuple, possible_keys:list):
-    try:
-        candidate_keys = [k_squared(prob_dist_tuples, pkey) for pkey in possible_keys]
-        return candidate_keys
-    except Exception as e:
-        error_writer(e, description=f"Error while handling k-score computations.")
-
-@function_logger_too
-def possible_key_pruning(possible_keys:list, std_n:int):
-    try:
-        if len(possible_keys) > 1:
-            # standard deviation pruning (definitely far far away)
-            std_delta = (2*np.std([k_squared for key, k_squared in possible_keys]))
-            _, smallest_ksquared_in_tier = possible_keys[0] #they are sorted
-            reduced_keys = [(key, k_squared) for key, k_squared in possible_keys if abs(k_squared-smallest_ksquared_in_tier) < std_delta]
-
-        else:
-            reduced_keys = possible_keys
-
-        return reduced_keys
-    except Exception as e:
-        error_writer(e, description=f"Error while std pruning possible candidates.")
-
-@function_logger_too
-def xor_pruning_lists(covet_groups: list, possible_keys:list):
-    try:
-        structured_possible_keys = [(n+1, i) for n, p in enumerate(possible_keys) for i in p if i in covet_groups]
-        return structured_possible_keys
-    except Exception as e:
-        error_writer(e, description=f"Error while xor pruning possible candidates.")
-
-@function_logger_too
 def monoal_cryptanalyzer(frequency_tuples, blob_length:int):
     try:
         frequency_tuples_complete = sort_algo(frequency_tuples[0]) # top 6 and top6n't
@@ -303,19 +223,8 @@ def monoal_cryptanalyzer(frequency_tuples, blob_length:int):
         #frequency_tuples_ = frequency_tuples_complete[:4] + frequency_tuples_complete[(len(frequency_tuples_)-6):]
         tops_prob_dist = prob_dist_complete[:4] + prob_dist_complete[(len(prob_dist_complete)-6):] #[prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples_]
         validated_combinatronics = cipher_combinatorics(tops_prob_dist) # monoalphabetism makes it easier (linear?) to find pairings... as they are 1-to-1
-        candidate_best_possible_keys = [layered_possible_letter_handler(prob_dist_complete, layered_pkey) for layered_pkey in validated_combinatronics]
-        
-        # tier pruning
-        candidate_best_possible_keys = [possible_key_pruning(sort_algo(t), 2) for t in candidate_best_possible_keys]
-        
-        # outlier pruning (tier independent)
-        tier_independent_best_keys = possible_key_pruning(sort_algo(list(set(chain.from_iterable(candidate_best_possible_keys)))), 2)
-        tier_independent_best_keys = [(key, ksquared) for key, ksquared in tier_independent_best_keys if (float(tier_independent_best_keys[0][1])*10 >= float(ksquared)) or ((tier_independent_best_keys[0][0]) == key)]
-        covet_group = [candidate_best_possible_keys[0], tier_independent_best_keys]
-        #reducing the space a bit more... not yet discarding the stuff not on the tier independent best keys
-        candidate_best_possible_keys_tuple = xor_pruning_lists(list(set(chain.from_iterable(covet_group))), candidate_best_possible_keys)
-        # if smallest key by a factor of 10 reduction
-        print(candidate_best_possible_keys_tuple)
+                
+        candidate_best_possible_keys = [k_squared(prob_dist_complete, pkey) for pkey in validated_combinatronics] if len(validated_combinatronics)>1 else (validated_combinatronics[0], 0)
         # if there is more than 1 candidate we send them all as is... we first want to check if another keylength has a 1-to-1 match
         # we could set breaks for the case 1-to-1 matches are found... but we leaving it as is for now
         return candidate_best_possible_keys
@@ -331,51 +240,85 @@ def candidate_keys_keylengths_arbitrage(list_lists_candidates:list):
         error_writer(e, description=f"Error while computing average matrix ioc.")
 
 @function_logger
-def single_matrix_cryptanalYzer(ciphertext_matrix:np.ndarray):
+def single_matrix_cryptanalizer(ciphertext_matrix:np.ndarray):
     try:
         matrix_frequencies = [matrix_frequency_computer(ciphertext_matrix[1][:,i]) for i in range(0, ciphertext_matrix[0])]
         # so I have the n number of monoalphabetic ciphers, now its time to figure out the actual key
         candidate_best_possible_keys_keylengths = [monoal_cryptanalyzer(list_tuple_, column_freqs_) for *list_tuple_, column_freqs_ in matrix_frequencies]
         # candidate arbitrage... if there is a 1-to-1 match we use it... else we do something else
-        candidate_best_possible_keys = candidate_keys_keylengths_arbitrage(candidate_best_possible_keys_keylengths) # doing a full candidate return... filtering on vigenere_break.py
-        return candidate_best_possible_keys 
+        candidate_best_possible_keys = candidate_keys_keylengths_arbitrage(candidate_best_possible_keys_keylengths) # doing a top 7 if not 1-to-1 type of thing
+        return candidate_best_possible_keys #averaging since the theory is vigenere is acting as collections of monoaplphabetic ciphers sequencing out
     except Exception as e:
         error_writer(e, description=f"Error while computing all matrix iocs.")
 
+@function_logger
+def ioc_filterer(list_iocs_:list):
+    try:
+        # so we are thinking again, multiple monoalphabetic ciphers in a sequence... and text is not random
+        # so we expect the p2 to be close to 0.066 with a small delta on either side
+        delta = 0.002 #arbitrary
+        
+        filtering_pass = [(keylength, ioc_) for keylength, ioc_ in list_iocs_ if ((0.066 - delta)< ioc_ < (0.066 + delta))]
+        filtering_pass = filtering_pass if len(filtering_pass) >=1 else [(keylength, ioc_) for keylength, ioc_ in list_iocs_ if ((0.066 - (5*delta))< ioc_ < (0.066 + (5*delta)))]
+        filtering_pass = filtering_pass if len(filtering_pass) >=1 else [(keylength, ioc_) for keylength, ioc_ in list_iocs_ if ((0.066 - (15*delta))< ioc_ < (0.066 + (15*delta)))]
+
+        return filtering_pass if len(filtering_pass) >=1 else list_iocs_ #guessing at this point (uniform distribution... random text or a polyalphabetic cyper... or larger keylength)
+    except Exception as e:
+        error_writer(e, description=f"Error while filtering ioc list.")
+
+#modded bubblesort
+@function_logger
+def factorial_collapser(list_iocs_:list):
+    try:
+        tuple_length = len(list_iocs_)
+
+        for i in range(tuple_length-1):
+            final_position = False
+            for j in range(tuple_length-1):
+                if (list_iocs_[j + 1][0] % list_iocs_[i][0] == 0) and (list_iocs_[j + 1][0] != 1) and (list_iocs_[i][0] !=1):
+                    list_iocs_[j + 1] = (1,1)
+
+        factorial_pass = [(keylength, ioc_) for keylength, ioc_ in list_iocs_ if (keylength>1)]
+        return factorial_pass
+
+    
+    except Exception as e:
+        error_writer(e, description=f"Error while filtering ioc list by factorization.")
+
 @function_logger_too
-def key_search(extracted_text_blob:list, keylength:int): #needs to be numpy array/matrix
+def ioc_search(extracted_text_blob:list, keylength:int): #needs to be numpy array/matrix
     try:
         list_possible_keylengths = [keylength] # keylength as an arg... multiple keylength functionality only on the vigenere_break.py
 
         ciphertext_matrices = []
         [ciphertext_matrices.append([i, ciphertext_digitizer_and_matrixator(extracted_text_blob, i)]) for i in list_possible_keylengths]
-        ciphertext_keys = [(l[0], single_matrix_cryptanalYzer(l)) for l in ciphertext_matrices]
+        ciphertext_key = [(l[0], single_matrix_cryptanalizer(l)) for l in ciphertext_matrices]
+        print(ciphertext_key)
 
-        return ciphertext_keys
+        # now ordering, filtering out, and considering the factorial possibility
+        filtered_iocs = factorial_collapser(ioc_filterer(sort_algo(ciphertext_iocs)))
+        return filtered_iocs
     except Exception as e:
         error_writer(e, description=f"Error while computing iocs end-to-end.")
 
 @function_logger
-def key_serializer(n_key:list):
-    return [chr(int(l + 65)) for l, score in n_key] #65 NOT 64... 
-
-@function_logger
-def key_decoder(n_keys:list):
-    keys = [key_serializer(n_key) for n_key in n_keys]
-    return ["".join(key) for key in keys]
+def ioc_sort(top_n_iocs:list):
+    try:
+        # there is space here for multi-language support, or other types of arbitrage (more than one key)... for now nothing
+        return top_n_iocs
+    except Exception as e:
+        error_writer(e, description=f"Error going from a matrix to utf-8, to strings.")
 
 @function_logger_too
-def plaintext_writeout(top_n_keys:list, ciphertext_filename:str):
+def plaintext_writeout(top_n_iocs:list, ciphertext_filename:str):
     try:
         dir_ = os.path.dirname(os.path.realpath(__file__))
-        full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_candidate_keys.txt"))
-        top_n_keys = [key_decoder(n_keys) for _, *n_keys in top_n_keys]
-        top_n_keys = list(chain.from_iterable(top_n_keys))
+        full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_candidate_keylengths.txt"))
 
         # i'm never checking the full_path... but that's ok I guess
         with open(full_path, "w") as file:
-            file.writelines("Possible keys.\n")
-            [file.writelines(f"Key: {key}\n") for key in top_n_keys]
+            file.writelines("Possible keylength candidates.\n")
+            [file.writelines(f"Keylength: {keylength_}\tIoc Value: {ioc_value}\n") for keylength_, ioc_value in top_n_iocs]
             return True
         #writeout and bool upon success/failure
         #writeout_confirmation = plaintext_blob
@@ -393,19 +336,19 @@ def main(argv=None):
     logging.basicConfig(filename='vigenere_cryptanalyze.log', level=logging.INFO)
 
     ap.add_argument('encrpyted_text_name')           # positional argument
-    ap.add_argument('keylength')           # positional argument
     args = ap.parse_args()
 
     # eventually check for both text_name and key args to be present or else stdout + error
 
     t = datetime.datetime.now()
-    logger.info(f'\t{t}\tStarting key search on {args.encrpyted_text_name} with keylength {args.keylength}.')
+    logger.info(f'\t{t}\tStarting index of coincidence calculation on {args.encrpyted_text_name}.')
 
-    extracted_text_blob, _ = ciphertext_reader(args.encrpyted_text_name)
+    extracted_text_blob, blob_length = ciphertext_reader(args.encrpyted_text_name)
 
     # algo run of IoC
-    top_n_keys = key_search(extracted_text_blob, int(args.keylength))
-    writeout_confirmation = plaintext_writeout(top_n_keys, args.encrpyted_text_name)
+    top_n_iocs = ioc_search(extracted_text_blob, blob_length)
+    best_ioc = ioc_sort(top_n_iocs)
+    writeout_confirmation = plaintext_writeout(best_ioc, args.encrpyted_text_name)
     #writeout_confirmation = ioc_writeout((best_ioc, top_7_iocs), args.encrpyted_text_name)
     print(f"Success status:\t{writeout_confirmation}")
 
