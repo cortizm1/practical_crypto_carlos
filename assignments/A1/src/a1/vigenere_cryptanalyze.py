@@ -244,8 +244,14 @@ def k_squared(prob_dist_tuples:tuple, possible_key:int):
         (24, 0.00150), (25, 0.01974), (26, 0.00074)]
 
         #letters_distribution = sort_algo(letters_distribution)
-        plaintexted_prob_dist = [(((l-possible_key)%26)+1, prob) for l, prob in prob_dist_tuples] # the plus one is key here... else we get 0-25 letter indexes
-        #print(plaintexted_prob_dist)
+        plaintexted_prob_dist = [(((l-possible_key)%26), prob) for l, prob in prob_dist_tuples] # the plus one is key here... else we get 0-25 letter indexes
+        
+        for i, k in enumerate(plaintexted_prob_dist):
+            if k[0]==0:
+                plaintexted_prob_dist[i] = (k[0] + 26, k[1])
+            else: 
+                pass # the plus one is key here... else we get 0-25 letter indexes
+
         plaintexted_prob_dist = sort_algo_too(plaintexted_prob_dist)
 
         sum_k_squared = []
@@ -254,13 +260,13 @@ def k_squared(prob_dist_tuples:tuple, possible_key:int):
         for l, prob in plaintexted_prob_dist: # it might be the case not all letters are used
             for i in letters_distribution:
                 if i[0] == l:
-                    k_squared = (prob - i[1])**2
+                    k_squared = (prob - i[1])**2/prob
                     sum_k_squared.append(k_squared)
                     break
 
-        return possible_key, sum(sum_k_squared) #ntimes_*(freq_/blob_length)**2
+        return possible_key, sum(sum_k_squared) #ntimes_*(freq_/blob_length)**2... k squared is actually shifted one to the left
     except Exception as e:
-        error_writer(e, description=f"Error while computing p_squared.")
+        error_writer(e, description=f"Error while computing k_squared.")
 
 @function_logger_too
 def layered_possible_letter_handler(prob_dist_tuples:tuple, possible_keys:list):
@@ -303,21 +309,31 @@ def monoal_cryptanalyzer(frequency_tuples, blob_length:int):
         #frequency_tuples_ = frequency_tuples_complete[:4] + frequency_tuples_complete[(len(frequency_tuples_)-6):]
         tops_prob_dist = prob_dist_complete[:4] + prob_dist_complete[(len(prob_dist_complete)-6):] #[prob_dist(tuple_, blob_length) for tuple_ in frequency_tuples_]
         validated_combinatronics = cipher_combinatorics(tops_prob_dist) # monoalphabetism makes it easier (linear?) to find pairings... as they are 1-to-1
-        candidate_best_possible_keys = [layered_possible_letter_handler(prob_dist_complete, layered_pkey) for layered_pkey in validated_combinatronics]
+        # if tier 1 is composed of 1 and only 1 we choose it
+        if len(validated_combinatronics[0]) == 1:
+            validated_combinatronics = validated_combinatronics[0]
+            candidate_best_possible_keys = validated_combinatronics
+        else:
+            candidate_best_possible_keys = [layered_possible_letter_handler(prob_dist_complete, layered_pkey) for layered_pkey in validated_combinatronics if len(validated_combinatronics)>1]
         
         # tier pruning
-        candidate_best_possible_keys = [possible_key_pruning(sort_algo(t), 2) for t in candidate_best_possible_keys]
-        
+        candidate_best_possible_keys = [possible_key_pruning(sort_algo(t), 2) for t in candidate_best_possible_keys] if len(candidate_best_possible_keys)>1 else candidate_best_possible_keys
         # outlier pruning (tier independent)
-        tier_independent_best_keys = possible_key_pruning(sort_algo(list(set(chain.from_iterable(candidate_best_possible_keys)))), 2)
-        tier_independent_best_keys = [(key, ksquared) for key, ksquared in tier_independent_best_keys if (float(tier_independent_best_keys[0][1])*10 >= float(ksquared)) or ((tier_independent_best_keys[0][0]) == key)]
-        covet_group = [candidate_best_possible_keys[0], tier_independent_best_keys]
-        #reducing the space a bit more... not yet discarding the stuff not on the tier independent best keys
-        candidate_best_possible_keys_tuple = xor_pruning_lists(list(set(chain.from_iterable(covet_group))), candidate_best_possible_keys)
-        # if smallest key by a factor of 10 reduction
-        print(candidate_best_possible_keys_tuple)
-        # if there is more than 1 candidate we send them all as is... we first want to check if another keylength has a 1-to-1 match
-        # we could set breaks for the case 1-to-1 matches are found... but we leaving it as is for now
+        tier_independent_best_keys = possible_key_pruning(sort_algo(list(set(chain.from_iterable(candidate_best_possible_keys)))), 2) if len(candidate_best_possible_keys)>1 else candidate_best_possible_keys
+        # the 10x ratio seems to be working surprisingly well
+        tier_independent_best_keys = [(key, ksquared) for key, ksquared in tier_independent_best_keys if (float(tier_independent_best_keys[0][1])*10 >= float(ksquared)) or ((tier_independent_best_keys[0][0]) == key)] if len(tier_independent_best_keys)>1 else tier_independent_best_keys
+        # setting up an additional arbitrage (just go for min if more than two still exist)
+        tier_independent_best_keys = [tier_independent_best_keys[0]] if len(tier_independent_best_keys)>1 else tier_independent_best_keys
+
+        if len(candidate_best_possible_keys)>1 and len(tier_independent_best_keys)==1:
+            candidate_best_possible_keys = [tier_independent_best_keys[0][0]]
+        elif len(candidate_best_possible_keys)==1:
+            candidate_best_possible_keys = candidate_best_possible_keys
+        else:
+            logger.error("COULDN'T FIGURE OUT THE LETTER... DEFAULTING LOL")
+            candidate_best_possible_keys = [0]
+            #candidate_best_possible_keys = [candidate_best_possible_keys, tier_independent_best_keys] # need to handle this special case scenarios
+            #candidate_best_possible_keys_tuple = xor_pruning_lists(list(set(chain.from_iterable(covet_group))), candidate_best_possible_keys)
         return candidate_best_possible_keys
     except Exception as e:
         error_writer(e, description=f"Error while computing per matrix iocs.")
@@ -331,7 +347,7 @@ def candidate_keys_keylengths_arbitrage(list_lists_candidates:list):
         error_writer(e, description=f"Error while computing average matrix ioc.")
 
 @function_logger
-def single_matrix_cryptanalYzer(ciphertext_matrix:np.ndarray):
+def single_matrix_cryptanalyzer(ciphertext_matrix:np.ndarray):
     try:
         matrix_frequencies = [matrix_frequency_computer(ciphertext_matrix[1][:,i]) for i in range(0, ciphertext_matrix[0])]
         # so I have the n number of monoalphabetic ciphers, now its time to figure out the actual key
@@ -349,7 +365,7 @@ def key_search(extracted_text_blob:list, keylength:int): #needs to be numpy arra
 
         ciphertext_matrices = []
         [ciphertext_matrices.append([i, ciphertext_digitizer_and_matrixator(extracted_text_blob, i)]) for i in list_possible_keylengths]
-        ciphertext_keys = [(l[0], single_matrix_cryptanalYzer(l)) for l in ciphertext_matrices]
+        ciphertext_keys = [(l[0], single_matrix_cryptanalyzer(l)) for l in ciphertext_matrices]
 
         return ciphertext_keys
     except Exception as e:
