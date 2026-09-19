@@ -1,16 +1,36 @@
-# Practical Cryptographic Systems — Fall 2026
+# Submission template
 
-**601.445 / 601.645, Johns Hopkins University.** Instructor: Matthew Green.
+Copy this directory, put your code in `src/`, and make `build.sh` produce the
+four executables in `bin/`. Everything here is optional scaffolding — the only
+things the autograder cares about are the contract in §8 of `A1.md`:
 
-Course site (syllabus, schedule, readings): **https://practicalcrypto.org**
+```
+build.sh                      # exit 0; produces the executables below
+bin/vigenere-encrypt          # <key> <file>
+bin/vigenere-decrypt          # <key> <file>
+bin/vigenere-keylength        # <file>            -> one integer
+bin/vigenere-cryptanalyze     # <file> <keylen>   -> up to 10 keys, one per line
+analysis.md  written.md  design.md  ai-usage.md
+```
 
-## Assignments
+## Two ways to satisfy the contract
 
-| | Handout | Released | Due |
-|---|---|---|---|
-| [Assignment 1: Classical Cryptanalysis](assignments/A1/) | [hw1.pdf](assignments/A1/hw1.pdf) | Wed Sep 2 | Fri Sep 18 |
+**Interpreted language (Python, Node, Ruby, …):** leave `build.sh` as is; make
+each `bin/` file a shebang wrapper that `exec`s your program. Two examples are
+provided (`bin/vigenere-encrypt` for Python; adapt for the others).
 
-Each assignment directory contains the handout (PDF and a Markdown copy your
-coding agent can read), `AGENTS.md` / `CLAUDE.md` agent instructions, sample
-data, a submission template, and the course container `Dockerfile`.
-Submissions go to Gradescope; questions go to Piazza.
+**Compiled language (Go, Rust, C, Java, …):** have `build.sh` compile into
+`bin/` (examples for Go and Rust are commented in `build.sh`). Binaries must
+not depend on files outside the submission directory.
+
+## Test in the course container before you submit
+
+```bash
+docker build -t pcs-a1 .                      # once; uses the provided Dockerfile
+docker run --rm -v "$PWD":/sub -w /sub pcs-a1 bash ./build.sh
+docker run --rm -v "$PWD":/sub -w /sub pcs-a1 bin/vigenere-keylength samples/ciphertext_1.txt
+docker run --rm pcs-a1 toolchains             # exact toolchain versions
+```
+
+If it doesn't build in the container, it doesn't build for the autograder,
+and you can't sign up for the review lab.
