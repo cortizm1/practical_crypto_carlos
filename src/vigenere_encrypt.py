@@ -86,9 +86,10 @@ def ciphertext_digitizer_and_matrixator(plaintext_blob:list, key:str):
 def matrix_encipherer(ciphertext_blob_matrix:np.ndarray, digitized_key:list): #needs to be numpy array/matrix
     try:
         # column-based matrix sums
+        digitized_key = [d-1 for d in digitized_key]
         ciphertext_blob_matrix_ciphered = (ciphertext_blob_matrix + digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
         ciphertext_blob_matrix_ciphered = np.where(ciphertext_blob_matrix_ciphered > 0, ciphertext_blob_matrix_ciphered, ciphertext_blob_matrix_ciphered + 26)
-        return ciphertext_blob_matrix_ciphered-1
+        return ciphertext_blob_matrix_ciphered
     except Exception as e:
         error_writer(e, description=f"Error while enciphering the matrix.")
 
@@ -138,8 +139,8 @@ def main(argv=None):
 
     logging.basicConfig(filename='vigenere_encrypt.log', level=logging.INFO)
 
-    ap.add_argument('encrpyted_text_name')           # positional argument
     ap.add_argument('key')           # positional argument
+    ap.add_argument('encrpyted_text_name')           # positional argument
     args = ap.parse_args()
 
     # eventually check for both text_name and key args to be present or else stdout + error

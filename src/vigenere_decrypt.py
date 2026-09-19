@@ -138,8 +138,8 @@ def main(argv=None):
 
     logging.basicConfig(filename='vigenere_decrypt.log', level=logging.INFO)
 
-    ap.add_argument('encrpyted_text_name')           # positional argument
     ap.add_argument('key')           # positional argument
+    ap.add_argument('encrpyted_text_name')           # positional argument
     args = ap.parse_args()
 
     # eventually check for both text_name and key args to be present or else stdout + error
