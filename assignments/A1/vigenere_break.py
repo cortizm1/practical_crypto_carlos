@@ -293,7 +293,6 @@ def ioc_search(extracted_text_blob:list, keylength:int): #needs to be numpy arra
         ciphertext_matrices = []
         [ciphertext_matrices.append([i, ciphertext_digitizer_and_matrixator(extracted_text_blob, i)]) for i in list_possible_keylengths]
         ciphertext_key = [(l[0], single_matrix_cryptanalizer(l)) for l in ciphertext_matrices]
-        print(ciphertext_key)
 
         # now ordering, filtering out, and considering the factorial possibility
         filtered_iocs = factorial_collapser(ioc_filterer(sort_algo(ciphertext_iocs)))

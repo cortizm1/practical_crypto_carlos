@@ -1,2 +1,0 @@
-Possible keylength candidates.
-Keylength: 6	Ioc Value: 0.0

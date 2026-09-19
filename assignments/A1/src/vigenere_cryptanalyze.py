@@ -39,7 +39,7 @@ def error_writer(e:Exception, description:str):
 def source_dir_walker(ciphertext_filename):
     try:
         #looking for files under the directory
-        dir_ = os.path.dirname(os.path.realpath(__file__))
+        dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, ciphertext_filename)
 
         if os.path.isfile(full_path):
@@ -330,8 +330,13 @@ def monoal_cryptanalyzer(frequency_tuples, blob_length:int):
         elif len(candidate_best_possible_keys)==1:
             candidate_best_possible_keys = candidate_best_possible_keys
         else:
-            logger.error("COULDN'T FIGURE OUT THE LETTER... DEFAULTING LOL")
-            candidate_best_possible_keys = [0]
+            # get the key with the least error, else default
+            candidate_best_possible_keys = [tier_independent_best_keys[0][0]]
+            if len(candidate_best_possible_keys > 0):
+                pass
+            # else
+            else:
+                candidate_best_possible_keys = [0]
             #candidate_best_possible_keys = [candidate_best_possible_keys, tier_independent_best_keys] # need to handle this special case scenarios
             #candidate_best_possible_keys_tuple = xor_pruning_lists(list(set(chain.from_iterable(covet_group))), candidate_best_possible_keys)
         return candidate_best_possible_keys
@@ -373,17 +378,21 @@ def key_search(extracted_text_blob:list, keylength:int): #needs to be numpy arra
 
 @function_logger
 def key_serializer(n_key:list):
-    return [chr(int(l + 65)) for l, score in n_key] #65 NOT 64... 
+    # in theory after the arbitrage stuff there should only be a single possible key/shift for each of the positions in the key
+    joined_list = list(chain.from_iterable(n_key))
+    joined_list = list(chain.from_iterable([chr(int(l + 65)) for l in joined_list])) #65 NOT 64... 
+    joined_list = "".join(joined_list)
+    return joined_list
 
 @function_logger
 def key_decoder(n_keys:list):
-    keys = [key_serializer(n_key) for n_key in n_keys]
-    return ["".join(key) for key in keys]
+    keys = [key_serializer(n_key) for n_key in n_keys] # for now just returning a possible key... could either return n keys per keylength or 1 key per n keylengths
+    return keys
 
 @function_logger_too
 def plaintext_writeout(top_n_keys:list, ciphertext_filename:str):
     try:
-        dir_ = os.path.dirname(os.path.realpath(__file__))
+        dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_candidate_keys.txt"))
         top_n_keys = [key_decoder(n_keys) for _, *n_keys in top_n_keys]
         top_n_keys = list(chain.from_iterable(top_n_keys))
@@ -398,6 +407,21 @@ def plaintext_writeout(top_n_keys:list, ciphertext_filename:str):
     except Exception as e:
         error_writer(e, description="Error on final file writeout.")
         return False
+
+@function_logger
+def std_writeout(top_n_keys:list):
+    try:
+        # conditional has to work a little different since we are working with lists of tuples
+        if len(top_n_keys) >= 1:
+            top_n_keys = [key_decoder(n_keys) for _, *n_keys in top_n_keys]
+            top_n_keys = list(chain.from_iterable(top_n_keys))
+            [print(f"{k}") for k in top_n_keys]
+        else:
+            # default list of possibilities in case somehow all went wrong
+            defaults_ = ['between','from','about','leave','think','them','your','some','little','because']
+            [print(f"{i}") for i in defaults_]
+    except Exception as e:
+        error_writer(e, description="Error on std writeout.")
 
 def main(argv=None):
 
@@ -422,8 +446,9 @@ def main(argv=None):
     # algo run of IoC
     top_n_keys = key_search(extracted_text_blob, int(args.keylength))
     writeout_confirmation = plaintext_writeout(top_n_keys, args.encrpyted_text_name)
+    _ = std_writeout(top_n_keys)
     #writeout_confirmation = ioc_writeout((best_ioc, top_7_iocs), args.encrpyted_text_name)
-    print(f"Success status:\t{writeout_confirmation}")
+    logger.info(f"Success status:\t{writeout_confirmation}")
 
 if __name__ == "__main__":
     main()

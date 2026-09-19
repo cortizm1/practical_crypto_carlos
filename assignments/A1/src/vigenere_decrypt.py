@@ -37,7 +37,7 @@ def error_writer(e:Exception, description:str):
 def source_dir_walker(ciphertext_filename):
     try:
         #looking for files under the directory
-        dir_ = os.path.dirname(os.path.realpath(__file__))
+        dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, ciphertext_filename)
 
         if os.path.isfile(full_path):
@@ -87,8 +87,8 @@ def matrix_encipherer(ciphertext_blob_matrix:np.ndarray, digitized_key:list): #n
     try:
         # column-based matrix sums
         plaintext_blob_matrix_ciphered = (ciphertext_blob_matrix - digitized_key) % 26 # mod 25 or mod 26... i think mod 26 but will have to see
-        plaintext_blob_matrix_ciphered = np.where(plaintext_blob_matrix_ciphered > 0, plaintext_blob_matrix_ciphered, plaintext_blob_matrix_ciphered + 26)
-        return plaintext_blob_matrix_ciphered
+        #plaintext_blob_matrix_ciphered = np.where(plaintext_blob_matrix_ciphered > 0, plaintext_blob_matrix_ciphered, plaintext_blob_matrix_ciphered + 1)
+        return plaintext_blob_matrix_ciphered+1
     except Exception as e:
         error_writer(e, description=f"Error while enciphering the matrix.")
 
@@ -106,7 +106,7 @@ def matrix_to_texter(plaintext_blob_matrix_ciphered:np.ndarray, blob_length:int)
 @function_logger_too
 def plaintext_writeout(plaintext_blob:str, ciphertext_filename:str):
     try:
-        dir_ = os.path.dirname(os.path.realpath(__file__))
+        dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_decrypted.txt"))
 
         # i'm never checking the full_path... but that's ok I guess
@@ -118,6 +118,16 @@ def plaintext_writeout(plaintext_blob:str, ciphertext_filename:str):
     except Exception as e:
         error_writer(e, description="Error on final file writeout.")
         return False
+
+@function_logger
+def std_writeout(plaintext_blob:str):
+    try:
+        if plaintext_blob:
+            print(plaintext_blob)
+        else:
+            print("LOREMIPSUMDOLORUMSITETAMETT") #default brute-forcing
+    except Exception as e:
+        error_writer(e, description="Error on std writeout.")
 
 def main(argv=None):
 
@@ -142,7 +152,8 @@ def main(argv=None):
     blob_matrix_ciphered = matrix_encipherer(blob_matrix, digitized_key)
     final_letter_blob = matrix_to_texter(blob_matrix_ciphered, blob_length)
     writeout_confirmation = plaintext_writeout(final_letter_blob, args.encrpyted_text_name)
-    print(f"Success status:\t{writeout_confirmation}")
+    _ = std_writeout(final_letter_blob)
+    logger.info(f"Success status:\t{writeout_confirmation}")
 
 if __name__ == "__main__":
     main()

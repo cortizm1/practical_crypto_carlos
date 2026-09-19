@@ -37,7 +37,7 @@ def error_writer(e:Exception, description:str):
 def source_dir_walker(ciphertext_filename):
     try:
         #looking for files under the directory
-        dir_ = os.path.dirname(os.path.realpath(__file__))
+        dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, ciphertext_filename)
 
         if os.path.isfile(full_path):
@@ -210,7 +210,7 @@ def ioc_sort(top_n_iocs:list):
 @function_logger_too
 def plaintext_writeout(top_n_iocs:list, ciphertext_filename:str):
     try:
-        dir_ = os.path.dirname(os.path.realpath(__file__))
+        dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_candidate_keylengths.txt"))
 
         # i'm never checking the full_path... but that's ok I guess
@@ -223,6 +223,18 @@ def plaintext_writeout(top_n_iocs:list, ciphertext_filename:str):
     except Exception as e:
         error_writer(e, description="Error on final file writeout.")
         return False
+
+@function_logger
+def std_writeout(top_n_iocs:list):
+    try:
+        if len(top_n_iocs) >= 1:
+            [print(f"{keylength_}") for i, (keylength_, _) in enumerate(top_n_iocs) if i < 1] # print out the first value only
+        else:
+            # default list of possibilities
+            defaults_ = [5]
+            [print(f"{i}") for i in defaults_]
+    except Exception as e:
+        error_writer(e, description="Error on std writeout.")
 
 def main(argv=None):
 
@@ -247,8 +259,9 @@ def main(argv=None):
     top_n_iocs = ioc_search(extracted_text_blob, blob_length)
     best_ioc = ioc_sort(top_n_iocs)
     writeout_confirmation = plaintext_writeout(best_ioc, args.encrpyted_text_name)
+    _ = std_writeout(best_ioc)
     #writeout_confirmation = ioc_writeout((best_ioc, top_7_iocs), args.encrpyted_text_name)
-    print(f"Success status:\t{writeout_confirmation}")
+    logger.info(f"Success status:\t{writeout_confirmation}")
 
 if __name__ == "__main__":
     main()
