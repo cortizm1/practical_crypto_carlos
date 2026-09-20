@@ -1,5 +1,5 @@
 [project]
-name = "a1"
+name = "practicalcrypto2026"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-a1 = "a1:main"
+practicalcrypto2026 = "practicalcrypto2026:main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
