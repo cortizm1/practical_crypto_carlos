@@ -68,11 +68,11 @@ def ciphertext_reader(ciphertext_filename:str):
         error_writer(e, description=f"Error while reading {ciphertext_filename}.")
 
 @function_logger_too
-def key_search(extracted_text_blob:list, list_keylength:list): #needs to be numpy array/matrix
+def key_search(extracted_text_blob:list, list_keylength:int): #needs to be numpy array/matrix
     try:
-        list_possible_keylengths = list_keylength # keylength as an arg... multiple keylength functionality only on the vigenere_break.py
-
+        list_possible_keylengths = [list_keylength] # keylength as an arg... multiple keylength functionality only on the vigenere_break.py
         extracted_text_blob = [(l - 64) for l in extracted_text_blob.upper().encode() if (64<int(l)<=90)]
+
         ciphertext_matrices = []
         [ciphertext_matrices.append([i, cdam(extracted_text_blob, i)]) for i in list_possible_keylengths]
         ciphertext_keys = [(l[0], single_matrix_cryptanalyzer(l)) for l in ciphertext_matrices]
@@ -86,37 +86,141 @@ def letter_by_letter(letter):
     try:
         if letter is not None:
             letter = chr(int(letter + 65))
+        #else:
+        #    letter = 0
     except Exception as e:
-        letter = chr(int(6 + 65))
-        error_writer(e, description=f"Error while computing iocs end-to-end.")
+        #letter = chr(int(6 + 65))
+        error_writer(e, description=f"Error while letter by letter.")
     return letter
 
 @function_logger
-def serialized_key(possible_key:tuple):
+def serialized_key(possible_key:list):
     try:
-        possible_key_ = list(chain.from_iterable(possible_key[1]))
-        #possible_key_ = [(possible_key_[i]+65) for l in range(possible_key_)]
-        serialized_possible_key = [letter_by_letter(l) for l in possible_key_]
+        serialized_possible_key = [letter_by_letter(l) for l in possible_key]
         serialized_possible_key = "".join(serialized_possible_key)
-        return possible_key[0], serialized_possible_key
+        return serialized_possible_key
     except Exception as e:
         error_writer(e, description=f"Error on serialized key.")
 
 @function_logger
-def key_serializer(n_key:list):
+def key_decoder(n_keys:list):
     try:
-        #pk, n_key = n_key[0]
-        # in theory after the arbitrage stuff there should only be a single possible key/shift for each of the positions in the key
-        possible_key_world = [(keylength, list(chain.from_iterable(possible_key))) for keylength, possible_key in n_key]
-        possible_key_world = [serialized_key(n) for n in n_key]
-        return possible_key_world
+        possible_key_world = list(chain.from_iterable(n_keys))
+        keys = serialized_key(possible_key_world) # for now just returning a possible key... could either return n keys per keylength or 1 key per n keylengths
+        return keys
     except Exception as e:
-        error_writer(e, description=f"Error on key serializer.")
+        error_writer(e, description=f"Error on key decoder.")
+
+@function_logger_too
+def key_checker(string, key):
+    try:
+        if string == key:
+            value = 1
+            partial = 0
+        else:
+            value = 0
+
+            counter = 0
+            string = list(string)
+            key = list(key)
+
+            for i in range(len(key)):
+                if string[i] == key[i]:
+                    counter = counter + 1
+
+            if counter >= (int(len(key)/2)):
+                partial = 1
+            else:
+                partial = 0
+        return value, partial
+    except Exception as e:
+        error_writer(e, description=f"Error on key checker.")
 
 @function_logger
-def key_decoder(n_keys:list):
-    keys = [key_serializer(key_universe) for key_universe in n_keys] # for now just returning a possible key... could either return n keys per keylength or 1 key per n keylengths
-    return keys
+def statistic_computer(list_trials:list):
+    try:
+        freq_table = [0,0,0,0,0,0,0]
+        partial_freq_table = [0,0,0,0,0,0,0]
+        freq_dist = [0,0,0,0,0,0,0]
+        true_freq_dist = [24,24,24,24,24,24,24]
+
+        # hard-coding this tbh
+        for key, context_window, candidates in list_trials:
+            if key is not None and candidates is not None:
+                freq_, partial_ = key_checker(key, candidates)
+                if context_window == 100:
+                    freq_table[0] = freq_table[0]+freq_
+                    partial_freq_table[0] = partial_freq_table[0]+partial_
+                    freq_dist[0] = freq_dist[0]+1
+                elif context_window == 200:
+                    freq_table[1] = freq_table[1]+freq_
+                    partial_freq_table[1] = partial_freq_table[1]+partial_
+                    freq_dist[1] = freq_dist[1]+1
+                elif context_window == 500:
+                    freq_table[2] = freq_table[2]+freq_
+                    partial_freq_table[2] = partial_freq_table[2]+partial_
+                    freq_dist[2] = freq_dist[2]+1
+                elif context_window == 1000:
+                    freq_table[3] = freq_table[3]+freq_
+                    partial_freq_table[3] = partial_freq_table[3]+partial_
+                    freq_dist[3] = freq_dist[3]+1
+                elif context_window == 2000:
+                    freq_table[4] = freq_table[4]+freq_
+                    partial_freq_table[4] = partial_freq_table[4]+partial_
+                    freq_dist[4] = freq_dist[4]+1
+                elif context_window == 5000:
+                    freq_table[5] = freq_table[5]+freq_
+                    partial_freq_table[5] = partial_freq_table[5]+partial_
+                    freq_dist[5] = freq_dist[5]+1
+                elif context_window == 20000:
+                    freq_table[6] = freq_table[6]+freq_
+                    partial_freq_table[6] = partial_freq_table[6]+partial_
+                    freq_dist[6] = freq_dist[6]+1
+
+        return freq_table, partial_freq_table, freq_dist, true_freq_dist, [100, 200, 500, 1000, 2000, 5000, 20000]
+
+    except Exception as e:
+        error_writer(e, description=f"Error on key statistic computer.")
+
+@function_logger
+def statistic_computer_too(list_trials:list):
+    try:
+        freq_table = [0,0,0,0,0,0]
+        partial_freq_table = [0,0,0,0,0,0]
+        freq_dist = [0,0,0,0,0,0]
+        true_freq_dist = [28,28,28,28,28,28]
+
+        # hard-coding this tbh
+        for key, context_window, candidates in list_trials:
+            if key is not None and candidates is not None:
+                freq_, partial_ = key_checker(key, candidates)
+                if len(key) == 3:
+                    freq_table[0] = freq_table[0]+freq_
+                    partial_freq_table[0] = partial_freq_table[0]+partial_
+                    freq_dist[0] = freq_dist[0]+1
+                elif len(key) == 5:
+                    freq_table[1] = freq_table[1]+freq_
+                    partial_freq_table[1] = partial_freq_table[1]+partial_
+                    freq_dist[1] = freq_dist[1]+1
+                elif len(key) == 7:
+                    freq_table[2] = freq_table[2]+freq_
+                    partial_freq_table[2] = partial_freq_table[2]+partial_
+                    freq_dist[2] = freq_dist[2]+1
+                elif len(key) == 10:
+                    freq_table[3] = freq_table[3]+freq_
+                    partial_freq_table[3] = partial_freq_table[3]+partial_
+                    freq_dist[3] = freq_dist[3]+1
+                elif len(key) == 15:
+                    freq_table[4] = freq_table[4]+freq_
+                    partial_freq_table[4] = partial_freq_table[4]+partial_
+                    freq_dist[4] = freq_dist[4]+1
+                elif len(key) == 20:
+                    freq_table[5] = freq_table[5]+freq_
+                    partial_freq_table[5] = partial_freq_table[5]+partial_
+                    freq_dist[5] = freq_dist[5]+1
+        return freq_table, partial_freq_table, freq_dist, true_freq_dist, [3, 5, 7, 10, 15, 20]
+    except Exception as e:
+        error_writer(e, description=f"Error on key statistic computer.")
 
 @function_logger_too
 def plaintext_writeout(top_n_keys:list, ciphertext_filename:str):
@@ -124,11 +228,17 @@ def plaintext_writeout(top_n_keys:list, ciphertext_filename:str):
         dir_ = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         full_path = os.path.join(dir_, str(ciphertext_filename[:-4] + "_candidate_keys.txt"))
 
+        statistics_list_cw = statistic_computer(top_n_keys) # context window
+        statistics_list_kl = statistic_computer_too(top_n_keys) # keylength
+
         # i'm never checking the full_path... but that's ok I guess
         with open(full_path, "w") as file:
-            file.writelines("Possible keys.\n")
-            [file.writelines(f"Actual Key: {key}\t|\tContext Window:{context_window}\nCandidate keys: {c}\n") for key, context_window, *candidates in top_n_keys for c in candidates]
-            #[file.writelines(f"Actual Key: {key}\t|\tContext Window:{context_window}\nCandidate key: {le}\n") for key, context_window, *candidates in top_n_keys for c in candidates for i in c if i is not None for le in i if le is not None]
+            file.writelines("Context_Window\tExact\tPartial\tFunctional\tAttempted\n")
+            [file.writelines(f"{statistics_list_cw[4][i]}\t\t\t\t{statistics_list_cw[0][i]}\t\t{statistics_list_cw[1][i]}\t\t{statistics_list_cw[2][i]}\t\t\t{statistics_list_cw[3][i]}\n") for i in range(len(statistics_list_cw[0])) if i < 3]
+            [file.writelines(f"{statistics_list_cw[4][i]}\t\t\t{statistics_list_cw[0][i]}\t\t{statistics_list_cw[1][i]}\t\t{statistics_list_cw[2][i]}\t\t\t{statistics_list_cw[3][i]}\n") for i in range(len(statistics_list_cw[0])) if i >= 3]
+            
+            file.writelines("\nKeylength\tExact\tPartial\tFunctional\tAttempted\n")
+            [file.writelines(f"{statistics_list_kl[4][i]}\t\t\t{statistics_list_kl[0][i]}\t\t{statistics_list_kl[1][i]}\t\t{statistics_list_kl[2][i]}\t\t\t{statistics_list_kl[3][i]}\n") for i in range(len(statistics_list_kl[0]))]
             return True
         #writeout and bool upon success/failure
         #writeout_confirmation = plaintext_blob
@@ -143,21 +253,22 @@ def std_writeout(top_n_keys:list):
         if len(top_n_keys) >= 1:
             top_n_keys = [key_decoder(n_keys) for _, *n_keys in top_n_keys]
             top_n_keys = list(chain.from_iterable(top_n_keys))
-            #[print(f"{k}") for k in top_n_keys]
         else:
             # default list of possibilities in case somehow all went wrong
             defaults_ = ['between','from','about','leave','think','them','your','some','little','because']
-            #[print(f"{i}") for i in defaults_]
     except Exception as e:
         error_writer(e, description="Error on std writeout.")
 
 @function_logger
 def random_key(key_length):
     try:
-        digitized_key = [random.randint(1,26) for i in range(key_length)]
-        digitized_key = [chr(int(d + 64)) for d in digitized_key]
-        key_ = ''.join(digitized_key)
-        return key_
+        keys = []
+        for i in range(4):
+            digitized_key = [random.randint(1,26) for i in range(key_length)]
+            digitized_key = [chr(int(d + 64)) for d in digitized_key]
+            key_ = ''.join(digitized_key)
+            keys.append(key_)
+        return keys
     except Exception as e:
         error_writer(e, description="Error on std writeout.")
 
@@ -181,6 +292,17 @@ def vigenere_encrypt(sample_text, key_, text_window_):
     except Exception as e:
         error_writer(e, description="Error on encryption.")
 
+@function_logger
+def keyl_removal(tuple_):
+    try:
+        _, b = tuple_
+        for i, x in enumerate(b):
+            if x is None:
+                b[i] = 0
+        return b # default to a just because tbh
+    except Exception as e:
+        error_writer(e, description="Error on key removal.")
+
 def main(argv=None):
 
     description = "A vigenere decipherer written in Python."
@@ -196,6 +318,7 @@ def main(argv=None):
     # eventually check for both text_name and key args to be present or else stdout + error
     possible_keylengths = [3, 5, 7, 10, 15, 20]
     random_keys = [random_key(pk) for pk in possible_keylengths]
+    random_keys = list(chain.from_iterable(random_keys))
     possible_text_windows = [100, 200, 500, 1000, 2000, 5000, 20000]
 
     extracted_text_blob, _ = ciphertext_reader(args.sample_text_name)
@@ -206,13 +329,9 @@ def main(argv=None):
     logger.info(f'\t{t}\tStarting key search on {args.sample_text_name} with keylengths {possible_keylengths}.')
     #possible_keylengths_too = [int(i) for i in range(3-21)]
 
-    possible_keylengths = [3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
-
     # algo run of IoC
-    top_n_keys = [(key_, text_window_, key_search(final_letter_blob, possible_keylengths)) for key_, text_window_, final_letter_blob in sample_trials]
-    top_n_keys = [(key, text_window_, key_decoder(n_keys)) for key, text_window_, *n_keys in top_n_keys]
-    #[print(f"{t}\n") for t in top_n_keys]
-    #top_n_keys = list(chain.from_iterable(top_n_keys))
+    top_n_keys = [(key_, text_window_, key_search(final_letter_blob, len(key_))) for key_, text_window_, final_letter_blob in sample_trials]
+    top_n_keys = [(key, text_window_, key_decoder(keyl_removal(n_key[0]))) for key, text_window_, n_key in top_n_keys]
     writeout_confirmation = plaintext_writeout(top_n_keys, args.sample_text_name)
     _ = std_writeout(top_n_keys)
     #writeout_confirmation = ioc_writeout((best_ioc, top_7_iocs), args.sample_text_name)
